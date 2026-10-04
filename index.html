@@ -96,7 +96,7 @@ audio{margin-top:6px;max-width:100%;height:34px}
 <div id="auth">
   <div class="auth-box">
     <h1>💬 Diễn Đàn 4 Người</h1>
-    <p class="sub">Nơi trò chuyện, chia sẻ ảnh/video, tặng quà cho nhau.</p>
+    <p class="sub">Nơi trò chuyện, chia sẻ ảnh/video, tặng quà cho nhau. Đã đăng nhập GAME 4 NGUOI trên trình duyệt này thì sẽ vào thẳng bằng tài khoản game.</p>
     <div class="fg" id="g-display"><label>Tên hiển thị (mọi người thấy tên này trong diễn đàn)</label><input id="a-display" maxlength="24" placeholder="Ví dụ: Đại Hiệp"></div>
     <div class="fg"><label>Tên tài khoản (dùng để vào tài khoản)</label><input id="a-user" maxlength="20" placeholder="a-z, 0-9, _ (tối thiểu 3 ký tự)" autocomplete="username"><div class="hint">Không thể đổi sau khi tạo. Tên này là chìa khoá tài khoản của bạn trên máy này.</div></div>
     <div class="err" id="a-err"></div>
@@ -223,6 +223,7 @@ $('#a-go').onclick = async () => {
   try{
     if(display.length<2) throw new Error('Tên hiển thị tối thiểu 2 ký tự.');
     if(k.length<3) throw new Error('Tên tài khoản tối thiểu 3 ký tự (chỉ a-z, 0-9, _).');
+    if(k.startsWith('g_')) throw new Error('Tên tài khoản không được bắt đầu bằng "g_" (dành cho tài khoản liên kết từ game).');
     $('#a-go').disabled=true;
     const r=await db.ref('fUsers/'+k).transaction(c=>c?undefined:{username:k,display,createdAt:Date.now(),coins:100,giftScore:0,lastCheckin:''});
     if(!r.committed) throw new Error('Tên tài khoản này đã có người dùng, hãy chọn tên khác.');
@@ -233,9 +234,19 @@ $('#a-go').onclick = async () => {
 
 async function tryAutoLogin(){
   try{
-    const s=JSON.parse(localStorage.getItem('forum_sess')||'null'); if(!s) return;
-    const u=await db.ref('fUsers/'+s.key).once('value');
-    if(u.exists()) enterApp(s.key); else localStorage.removeItem('forum_sess');
+    const s=JSON.parse(localStorage.getItem('forum_sess')||'null');
+    if(s){ const u=await db.ref('fUsers/'+s.key).once('value'); if(u.exists()){ enterApp(s.key); return; } localStorage.removeItem('forum_sess'); }
+  }catch(e){}
+  // Liên kết với tài khoản GAME 4 NGUOI nếu cùng trình duyệt/cùng domain đã đăng nhập game:
+  // dùng Xưng hô (nickname) làm tên hiển thị, tên tài khoản game (bỏ @game4nguoi.com) làm khoá, thêm tiền tố g_
+  try{
+    const g=JSON.parse(localStorage.getItem('game4nguoi_session')||'null');
+    if(g && g.username){
+      const k='g_'+ukey(String(g.username).split('@')[0]);
+      const display=(g.nickname||g.username).toString().slice(0,24);
+      await db.ref('fUsers/'+k).transaction(c=>c?undefined:{username:k,display,createdAt:Date.now(),coins:100,giftScore:0,lastCheckin:'',fromGame:true});
+      enterApp(k);
+    }
   }catch(e){}
 }
 
