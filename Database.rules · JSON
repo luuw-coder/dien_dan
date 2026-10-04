@@ -1,0 +1,12 @@
+{
+  "rules": {
+    "fAuth":    { "$u": { ".read": true, ".write": "!data.exists()" } },
+    "fUsers":   { ".read": true, ".indexOn": ["giftScore"], "$u": { ".write": true } },
+    "presence": { ".read": true, "$u": { ".write": true } },
+    "threads":  { ".read": true, ".indexOn": ["lastTs"], "$t": { ".write": true, ".validate": "newData.hasChildren(['title','from','name'])" } },
+    "posts":    { ".read": true, "$t": { "$p": { ".write": true } } },
+    "chat":     { ".read": true, "$r": { "$m": { ".write": true } } },
+    "dm":       { ".read": true, "$p": { "$m": { ".write": true } } },
+    "dmIndex":  { ".read": true, "$u": { ".indexOn": ["ts"], "$o": { ".write": true } } }
+  }
+}
